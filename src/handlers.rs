@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use axum::{extract::{State, path, Query}, http::StatusCode, response::IntoResponse, Json, Router};
+use axum::extract::Path;
 use serde_json::json;
+use uuid::Uuid;
 use crate::{
     model::UserModel,
     schema::{CreateUserSchema, UpdateUserSchema, FilterOptions},
@@ -42,7 +44,7 @@ pub async fn users_list_handler(
     Ok(Json(json_response))
 }
 
-pub async fn create_user_handler(State(data):State<Arc<AppState>>,
+pub async fn create_users_handler(State(data):State<Arc<AppState>>,
     Json(body):Json<CreateUserSchema>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let query_result = sqlx::query_as!(
@@ -70,6 +72,38 @@ pub async fn create_user_handler(State(data):State<Arc<AppState>>,
                 "message": "Something went wrong while creating a user."
             });
             Err((StatusCode::INTERNAL_SERVER_ERROR, Json(error_response)))
+        }
+    }
+}
+
+pub async fn get_user_handler(
+    Path(id):Path<Uuid>,
+    State(data):State<Arc<AppState>>,
+)->Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let query_result = sqlx::query_as!(
+        UserModel,
+        "SELECT * FROM users WHERE id = $1",
+        id
+    )
+        .fetch_one(&data.db)
+        .await;
+
+    return match query_result {
+        Ok(user) => {
+            let user_response = serde_json::json!({
+                "status":"success",
+                "data":serde_json::json!({
+                    "user":user
+                })
+            })
+            return Ok(Json(user_response));
+        }
+        Err(err) => {
+            let error_message = serde_json::json!({
+                "status":"fail",
+                "message": format!("User with id:{} could not be found", id)
+            });
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(error_message)));
         }
     }
 }
