@@ -1,10 +1,17 @@
-use axum::http::StatusCode;
-use axum::{extract::Path, extract::State, routing::get, Json, Router};
 mod db;
 use sqlx::PgPool;
-
-async fn root() -> String {
-    format!("hej")
+use axum::{response::IntoResponse, routing::get, Json, Router};
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use serde_json::json;
+use dotenv::dotenv;
+async fn root() -> impl IntoResponse {
+    const MESSAGE: &str = "Hello, World!!";
+    let json_response = serde_json::json!({
+        "status":"success",
+        "message":MESSAGE
+    });
+    Json(json!({"message":MESSAGE}))
 }
 async fn user(State(pool): State<PgPool>) -> Result<Json<Vec<db::User>>, (StatusCode, String)> {
     db::get_users(&pool).await.map(Json).map_err(|e| {
@@ -18,7 +25,7 @@ async fn user_id(Path(id): Path<u32>) -> String {
 }
 #[tokio::main]
 async fn main() {
-    dotenvy::dotenv().expect("Could not load .env file");
+    dotenv().expect("Could not load .env file");
 
     let pool = db::create_pool()
         .await
