@@ -1,28 +1,19 @@
-mod db;
+mod route;
+mod handler;
 mod model;
 mod schema;
-mod handlers;
-mod route;
 
 use std::sync::Arc;
-use sqlx::{postgres::PgPoolOptions, PgPool, Pool, Postgres};
-use axum::{response::IntoResponse, routing::get, Json, Router};
-use axum::extract::{Path, State};
-use axum::http::StatusCode;
-use serde_json::json;
-use dotenv::dotenv;
-async fn root() -> impl IntoResponse {
-    const MESSAGE: &str = "Hello, World!!";
-    let json_response = serde_json::json!({
-        "status":"success",
-        "message":MESSAGE
-    });
-    Json(json!({"message":MESSAGE}))
-}
 
-async fn user_id(Path(id): Path<u32>) -> String {
-    format!("User ID: {}", id)
-}
+use dotenv::dotenv;
+use route::create_router;
+
+use axum::http::{
+    header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+    HeaderValue, Method,
+};
+use tower_http::cors::CorsLayer;
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 pub struct AppState {
     db:Pool<Postgres>,
@@ -46,12 +37,14 @@ async fn main() {
         std::process::exit(1);
     }
     };
-    let app_state = Arc::new(AppState { db: pool.clone() });
 
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/user/{id}", get(user_id))
-        .with_state(app_state);
+    let cors = CorsLayer::new()
+        .allow_origin("http://localhost:3000".parse::<HeaderValue>().unwrap())
+            .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
+            .allow_credentials(true)
+            .allow_headers([AUTHORIZATION, ACCEPT, CONTENT_TYPE]);
+    
+    let app = create_router(Arc::new(AppState{db: pool.clone()})).layer(cors);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Server is listening on: {}", listener.local_addr().unwrap());

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use axum::{extract::{State, path, Query}, http::StatusCode, response::IntoResponse, Json, Router};
+use axum::{extract::{State, Query}, http::StatusCode, response::IntoResponse, Json};
 use axum::extract::Path;
 use serde_json::json;
 use uuid::Uuid;
 use crate::{
     model::UserModel,
-    schema::{CreateUserSchema, UpdateUserSchema, FilterOptions},
+    schema::{CreateUserSchema, FilterOptions},
     AppState
 };
 
@@ -16,19 +16,19 @@ pub async fn users_list_handler(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let Query(opt) = opt.unwrap_or_default();
     let limit = opt.limit.unwrap_or(10);
-    let offset = (opt.page.unwrap_or(1))-1*limit;
+    let offset = (opt.page.unwrap_or(1) - 1) * limit;
 
     let query_result = sqlx::query_as!(
-        UserModel,
-        "SELECT * FROM users ORDER by id LIMIT $1 OFFSET $2",
-        limit as i32,
-        offset as i32
-    )
+    UserModel,
+    "SELECT * FROM users ORDER BY id LIMIT $1 OFFSET $2",
+    limit as i64,
+    offset as i64
+)
         .fetch_all(&data.db)
         .await;
 
     if query_result.is_err() {
-        let error_response = serde_json::json!({
+        let error_response = json!({
             "status":"fail",
             "message": "Something went wrong while fetching the users."
         });
@@ -36,7 +36,7 @@ pub async fn users_list_handler(
     }
     let users = query_result.unwrap();
 
-    let json_response = serde_json::json!({
+    let json_response = json!({
         "status":"ok",
         "result": users.len(),
         "users": users,
@@ -56,7 +56,7 @@ pub async fn create_users_handler(State(data):State<Arc<AppState>>,
         .fetch_one(&data.db)
         .await;
 
-    return match query_result {
+    match query_result {
         Ok(user) => {
             let user_response = json!({
                 "status":"success",
@@ -67,9 +67,9 @@ pub async fn create_users_handler(State(data):State<Arc<AppState>>,
             Ok(Json(user_response))
         }
         Err(err) => {
-            let error_response = serde_json::json!({
+            let error_response = json!({
                 "status":"fail",
-                "message": "Something went wrong while creating a user."
+                "message": format!("Something went wrong while creating a user: {:?}", err)
             });
             Err((StatusCode::INTERNAL_SERVER_ERROR, Json(error_response)))
         }
@@ -88,18 +88,18 @@ pub async fn get_user_handler(
         .fetch_one(&data.db)
         .await;
 
-    return match query_result {
+    match query_result {
         Ok(user) => {
-            let user_response = serde_json::json!({
+            let user_response = json!({
                 "status":"success",
-                "data":serde_json::json!({
+                "data":json!({
                     "user":user
                 })
             });
             Ok(Json(user_response))
         }
-        Err(err) => {
-            let error_message = serde_json::json!({
+        Err(_) => {
+            let error_message = json!({
                 "status":"fail",
                 "message": format!("User with id:{} could not be found", id)
             });
