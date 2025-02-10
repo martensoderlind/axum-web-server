@@ -1,5 +1,7 @@
 mod db;
 mod model;
+mod schema;
+mod handlers;
 
 use std::sync::Arc;
 use sqlx::{postgres::PgPoolOptions, PgPool, Pool, Postgres};
