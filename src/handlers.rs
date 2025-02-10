@@ -95,15 +95,15 @@ pub async fn get_user_handler(
                 "data":serde_json::json!({
                     "user":user
                 })
-            })
-            return Ok(Json(user_response));
+            });
+            Ok(Json(user_response))
         }
         Err(err) => {
             let error_message = serde_json::json!({
                 "status":"fail",
                 "message": format!("User with id:{} could not be found", id)
             });
-            return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(error_message)));
+            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(error_message)))
         }
     }
 }
