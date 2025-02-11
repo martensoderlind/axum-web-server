@@ -1,9 +1,9 @@
-import Users from "@/features/users/components/users";
+import { UserTabs } from "@/features/users/components/users-dashboard";
 
 export default function Page() {
   return (
-    <div>
-      <Users />
+    <div className="container mx-auto p-2">
+      <UserTabs />
     </div>
   );
 }
