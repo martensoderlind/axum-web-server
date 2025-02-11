@@ -14,8 +14,10 @@ pub struct ParamOptions {
 pub struct CreateUserSchema {
     pub name: String,
     pub email: String,
-}#[derive(Debug, Deserialize, Serialize)]
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct UpdateUserSchema {
-    pub name: String,
-    pub email: String,
+    pub name: Option<String>,
+    pub email: Option<String>,
 }

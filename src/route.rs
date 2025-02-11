@@ -7,7 +7,7 @@ use axum::{
 
 use crate::{
     handler::{
-        get_user_handler,create_users_handler,users_list_handler, delete_user_handler
+        get_user_handler,create_users_handler,users_list_handler, delete_user_handler,edit_user_handler
     },
     AppState
 };
@@ -20,6 +20,7 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .route(
             "/users/:id",
             get(get_user_handler)
+                .patch(edit_user_handler)
                 .delete(delete_user_handler),
         )
         .with_state(app_state)

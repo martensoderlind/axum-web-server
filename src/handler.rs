@@ -9,6 +9,7 @@ use crate::{
     schema::{CreateUserSchema, FilterOptions},
     AppState
 };
+use crate::schema::UpdateUserSchema;
 
 pub async fn users_list_handler(
     opt:Option<Query<FilterOptions>>,
@@ -124,4 +125,49 @@ pub async fn  delete_user_handler(Path(id):Path<Uuid>, State(data):State<Arc<App
        return  Err((StatusCode::NOT_FOUND, Json(error_response)))
     }
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn edit_user_handler(
+    Path(id):Path<Uuid>,
+    State(data):State<Arc<AppState>>,
+    Json(body):Json<UpdateUserSchema>)->Result<impl IntoResponse, (StatusCode,Json<serde_json::Value>)>{
+    let query_result = sqlx::query_as!(UserModel,
+    "SELECT * FROM users WHERE id =$1",id)
+        .fetch_one(&data.db)
+        .await;
+
+    if query_result.is_err(){
+        let error_response = json!({
+            "status":"fail",
+            "message":format!("user with id: {} does not exist",id)
+        });
+        return Err((StatusCode::NOT_FOUND,Json(error_response)))
+    }
+
+    let user = query_result.unwrap();
+
+    let query_result = sqlx::query_as!(UserModel,"UPDATE users SET name = $1, email= $2 WHERE id=$3 RETURNING *",
+    body.name.to_owned().unwrap_or(user.name),
+    body.email.to_owned().unwrap_or(user.email),
+    id)
+        .fetch_one(&data.db)
+        .await;
+
+    match query_result {
+        Ok(user)=>{
+            let user_response = json!({
+                "status":"success",
+                "data":json!({
+                    "user":user
+                })
+            });
+            Ok(Json(user_response))
+        }
+        Err(err) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"status": "error","message": format!("{:?}", err)})),
+            ));
+        }
+    }
 }
