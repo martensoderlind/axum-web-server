@@ -107,3 +107,21 @@ pub async fn get_user_handler(
         }
     }
 }
+
+pub async fn  delete_user_handler(Path(id):Path<Uuid>, State(data):State<Arc<AppState>>)->Result<impl IntoResponse, (StatusCode,Json<serde_json::Value>)> {
+    let affected_row = sqlx::query_as!(UserModel,"DELETE FROM users WHERE id = $1",id)
+        .execute(&data.db)
+        .await
+        .unwrap()
+        .rows_affected();
+
+    if affected_row == 0
+    {
+        let error_response= json!({
+            "status": "fail",
+            "message": format!("user with id {} does not exist",id)
+        });
+       return  Err((StatusCode::NOT_FOUND, Json(error_response)))
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
